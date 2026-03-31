@@ -87,7 +87,9 @@ const fS=m=>m<60?`${m}m`:`${Math.floor(m/60)}h${m%60?m%60+"m":""}`;
 const ago=n=>{const d=new Date();d.setDate(d.getDate()-n);return toDS(d)};
 
 const DS=[{id:"s1",name:"朝",start:"06:00",end:"09:00",icon:"🌅"},{id:"s2",name:"午前",start:"09:00",end:"12:00",icon:"☀"},{id:"s3",name:"午後",start:"12:00",end:"15:00",icon:"🏙"},{id:"s4",name:"夕方",start:"15:00",end:"18:00",icon:"🌇"},{id:"s5",name:"夜",start:"18:00",end:"21:00",icon:"🌙"}];
-const DR=[{id:"r1",name:"読書",est:30,section:"s1",recur:{type:"daily"},icon:"📖"},{id:"r2",name:"コーディング練習",est:60,section:"s2",recur:{type:"daily"},icon:"⌨"},{id:"r3",name:"英語学習",est:25,section:"s3",recur:{type:"daily"},icon:"🗣"},{id:"r4",name:"振り返りノート",est:15,section:"s5",recur:{type:"daily"},icon:"✍"},{id:"r5",name:"週次レビュー",est:30,section:"s4",recur:{type:"weekly",days:[0]},icon:"📊"}];
+const MODES=[{id:"focus",name:"集中",icon:"🎯",color:"#7eb8da",bg:"rgba(126,184,218,0.12)"},{id:"comm",name:"連絡",icon:"💬",color:"#a78bda",bg:"rgba(167,139,218,0.12)"},{id:"move",name:"移動",icon:"🚶",color:"#dac07e",bg:"rgba(218,192,126,0.12)"},{id:"think",name:"思考",icon:"🧠",color:"#7edaaa",bg:"rgba(126,218,170,0.12)"},{id:"routine",name:"作業",icon:"⚙",color:"#da8b8b",bg:"rgba(218,139,139,0.12)"},{id:"other",name:"その他",icon:"📌",color:"#a0a0aa",bg:"rgba(160,160,170,0.12)"}];
+const modeMap=Object.fromEntries(MODES.map(m=>[m.id,m]));
+const DR=[{id:"r1",name:"読書",est:30,section:"s1",recur:{type:"daily"},icon:"📖",mode:"focus"},{id:"r2",name:"コーディング練習",est:60,section:"s2",recur:{type:"daily"},icon:"⌨",mode:"focus"},{id:"r3",name:"英語学習",est:25,section:"s3",recur:{type:"daily"},icon:"🗣",mode:"focus"},{id:"r4",name:"振り返りノート",est:15,section:"s5",recur:{type:"daily"},icon:"✍",mode:"think"},{id:"r5",name:"週次レビュー",est:30,section:"s4",recur:{type:"weekly",days:[0]},icon:"📊",mode:"think"}];
 
 function mRec(rc,ds){if(!rc)return false;const{type,days,nth,weekday}=rc;if(type==="daily")return true;if(type==="weekly")return days?.includes(dIdx(ds));if(type==="monthly")return days?.includes(dOfM(ds));if(type==="nth_weekday")return dIdx(ds)===weekday&&nthWd(ds)===nth;return false}
 function isD(v){if(!v)return false;if(v===true||typeof v==="string")return true;return!!(v.s&&v.e)}
@@ -162,9 +164,9 @@ function App(){
   const[sel,setSel]=useState(td());const[view,setView]=useState("timeline");
   const[toast,setToast]=useState("");const[loaded,setLoaded]=useState(false);
   const[aa,setAA]=useState(null);
-  const[intM,setIntM]=useState(false);const[intNm,setIntNm]=useState("");const[intE,setIntE]=useState("15");const[intSc,setIntSc]=useState("s2");
-  const[addM,setAddM]=useState(false);const[addNm,setAddNm]=useState("");const[addE,setAddE]=useState("30");const[addSc,setAddSc]=useState("s2");
-  const[routeM,setRouteM]=useState(null);const[rNm,setRNm]=useState("");const[rE,setRE]=useState("30");const[rSc,setRSc]=useState("s2");const[rTy,setRTy]=useState("daily");const[rDs,setRDs]=useState([]);const[rN,setRN]=useState(1);const[rW,setRW]=useState(1);
+  const[intM,setIntM]=useState(false);const[intNm,setIntNm]=useState("");const[intE,setIntE]=useState("15");const[intSc,setIntSc]=useState("s2");const[intMd,setIntMd]=useState("other");
+  const[addM,setAddM]=useState(false);const[addNm,setAddNm]=useState("");const[addE,setAddE]=useState("30");const[addSc,setAddSc]=useState("s2");const[addMd,setAddMd]=useState("focus");
+  const[routeM,setRouteM]=useState(null);const[rNm,setRNm]=useState("");const[rE,setRE]=useState("30");const[rSc,setRSc]=useState("s2");const[rTy,setRTy]=useState("daily");const[rDs,setRDs]=useState([]);const[rN,setRN]=useState(1);const[rW,setRW]=useState(1);const[rMd,setRMd]=useState("focus");
   const[birthday,setBirthday]=useState("");const[lifeExp,setLifeExp]=useState(80);
   const[tickK,setTickK]=useState(0);const[syncOk,setSyncOk]=useState(false);const tT=useRef(null);const syncRef=useRef(false);
 
@@ -206,7 +208,7 @@ function App(){
   const isT=sel===td();const shD=o=>{const d=new Date(sel+"T00:00:00");d.setDate(d.getDate()+o);if(toDS(d)>td())return;setSel(toDS(d))};
 
   const tasks=useMemo(()=>{
-    const base=routines.filter(r=>mRec(r.recur,sel)).map(r=>({id:r.id,name:r.name,est:r.est,section:r.section,icon:r.icon,type:"routine"}));
+    const base=routines.filter(r=>mRec(r.recur,sel)).map(r=>({id:r.id,name:r.name,est:r.est,section:r.section,icon:r.icon,type:"routine",mode:r.mode||"other"}));
     const ex=extras.filter(e=>e.date===sel);const all=[...base,...ex];
     const so=sections.map(s=>s.id);const to={routine:0,manual:1,interrupt:2,continuation:3};
     all.sort((a,b)=>{const sa=so.indexOf(a.section);const sb=so.indexOf(b.section);if(sa!==sb)return sa-sb;return(to[a.type]||0)-(to[b.type]||0)});return all;
@@ -234,12 +236,12 @@ function App(){
   const hAA=act=>{if(!aa)return;
     if(act==="next"&&aa.nxId){setCp(p=>{const n={...p};Object.keys(n).forEach(k=>{if(k.endsWith("_"+sel)&&isR(n[k]))n[k]={...n[k],e:now()}});n[`${aa.nxId}_${sel}`]={s:now()};return n});sT(`${aa.nxNm} を開始`)}
     else if(act==="break")sT("休憩中…お疲れさまです");
-    else if(act==="interrupt"){const sp=tMin(aa.et)-tMin(aa.st);const rem=Math.max(0,(aa.est||0)-sp);setEx(p=>[...p,{id:"c_"+Date.now(),name:aa.name+"（続き）",est:rem>0?rem:aa.est||15,section:tasks.find(t=>t.id===aa.id)?.section||"s2",date:sel,type:"continuation",icon:"↩"}]);sT("中断 → 続き追加")}
+    else if(act==="interrupt"){const sp=tMin(aa.et)-tMin(aa.st);const rem=Math.max(0,(aa.est||0)-sp);const parentTask=tasks.find(t=>t.id===aa.id);setEx(p=>[...p,{id:"c_"+Date.now(),name:aa.name+"（続き）",est:rem>0?rem:aa.est||15,section:parentTask?.section||"s2",date:sel,type:"continuation",icon:"↩",mode:parentTask?.mode||"other"}]);sT("中断 → 続き追加")}
     setAA(null)};
 
-  const addInt=()=>{const nm=intNm.trim();if(!nm)return;const id="i_"+Date.now();setEx(p=>[...p,{id,name:nm,est:parseInt(intE)||15,section:intSc,date:sel,type:"interrupt",icon:"⚡"}]);setCp(p=>{const n={...p};Object.keys(n).forEach(k=>{if(k.endsWith("_"+sel)&&isR(n[k]))n[k]={...n[k],e:now()}});n[`${id}_${sel}`]={s:now()};return n});setIntNm("");setIntE("15");setIntM(false);sT("割り込み開始")};
-  const addMan=()=>{const nm=addNm.trim();if(!nm)return;setEx(p=>[...p,{id:"m_"+Date.now(),name:nm,est:parseInt(addE)||30,section:addSc,date:sel,type:"manual",icon:"＋"}]);setAddNm("");setAddE("30");setAddM(false);sT("追加")};
-  const saveRt=()=>{const nm=rNm.trim();if(!nm)return;const rc=rTy==="daily"?{type:"daily"}:rTy==="weekly"?{type:"weekly",days:rDs}:rTy==="monthly"?{type:"monthly",days:rDs}:{type:"nth_weekday",nth:rN,weekday:rW};if(routeM==="new")setRt(p=>[...p,{id:"r_"+Date.now(),name:nm,est:parseInt(rE)||30,section:rSc,recur:rc,icon:"◉"}]);else setRt(p=>p.map(r=>r.id===routeM?{...r,name:nm,est:parseInt(rE)||30,section:rSc,recur:rc}:r));setRouteM(null);sT("保存")};
+  const addInt=()=>{const nm=intNm.trim();if(!nm)return;const id="i_"+Date.now();setEx(p=>[...p,{id,name:nm,est:parseInt(intE)||15,section:intSc,date:sel,type:"interrupt",icon:"⚡",mode:intMd}]);setCp(p=>{const n={...p};Object.keys(n).forEach(k=>{if(k.endsWith("_"+sel)&&isR(n[k]))n[k]={...n[k],e:now()}});n[`${id}_${sel}`]={s:now()};return n});setIntNm("");setIntE("15");setIntMd("other");setIntM(false);sT("割り込み開始")};
+  const addMan=()=>{const nm=addNm.trim();if(!nm)return;setEx(p=>[...p,{id:"m_"+Date.now(),name:nm,est:parseInt(addE)||30,section:addSc,date:sel,type:"manual",icon:"＋",mode:addMd}]);setAddNm("");setAddE("30");setAddMd("focus");setAddM(false);sT("追加")};
+  const saveRt=()=>{const nm=rNm.trim();if(!nm)return;const rc=rTy==="daily"?{type:"daily"}:rTy==="weekly"?{type:"weekly",days:rDs}:rTy==="monthly"?{type:"monthly",days:rDs}:{type:"nth_weekday",nth:rN,weekday:rW};if(routeM==="new")setRt(p=>[...p,{id:"r_"+Date.now(),name:nm,est:parseInt(rE)||30,section:rSc,recur:rc,icon:"◉",mode:rMd}]);else setRt(p=>p.map(r=>r.id===routeM?{...r,name:nm,est:parseInt(rE)||30,section:rSc,recur:rc,mode:rMd}:r));setRouteM(null);sT("保存")};
   const reset=()=>{setRt(DR);setSc(DS);setEx([]);setCp({});setBirthday("");setLifeExp(80);sto.del(SK);fbRef.remove().catch(()=>{});sT("リセット")};
 
   const dD=stats.done;const dP=tasks.length?Math.round(dD/tasks.length*100):0;
@@ -308,15 +310,17 @@ function App(){
           {sTasks.map(t=>{const cv=comp[`${t.id}_${sel}`];const done=isD(cv);const run=isR(cv);const st=cv?.s;const et=cv?.e;
             const am=st&&et?tMin(et)-tMin(st)+(tMin(et)<tMin(st)?1440:0):run&&st?tMin(now())-tMin(st)+(tMin(now())<tMin(st)?1440:0):null;
             const ov=done&&am!=null&&t.est>0?am-t.est:null;const tb=t.type==="interrupt"?"⚡":t.type==="continuation"?"↩":t.type==="manual"?"＋":null;
-            return<div key={t.id} onClick={()=>toggle(t.id)} style={{background:run?"var(--card-active)":done?"var(--card-done)":"var(--card)",border:`1px solid ${run?"var(--border2)":"var(--border)"}`,borderLeft:run?"3px solid var(--t2)":done?"3px solid var(--t4)":"1px solid var(--border)",borderRadius:4,padding:"13px 14px",marginBottom:3,cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",justifyContent:"space-between",userSelect:"none",animation:"fadeIn .3s"}}>
+            const md=modeMap[t.mode]||modeMap.other;
+            return<div key={t.id} onClick={()=>toggle(t.id)} style={{background:run?"var(--card-active)":done?"var(--card-done)":"var(--card)",border:`1px solid ${run?"var(--border2)":"var(--border)"}`,borderLeft:run?`3px solid ${md.color}`:done?"3px solid var(--t4)":`3px solid ${md.color}40`,borderRadius:4,padding:"13px 14px",marginBottom:3,cursor:"pointer",transition:"all .2s",display:"flex",alignItems:"center",justifyContent:"space-between",userSelect:"none",animation:"fadeIn .3s"}}>
               <div style={{display:"flex",alignItems:"center",gap:12,flex:1,minWidth:0}}>
-                <div style={{width:20,height:20,borderRadius:3,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:done?"var(--t1)":"transparent",border:done?"1px solid var(--t3)":run?"1px solid var(--t2)":"1px solid var(--border2)"}}>
+                <div style={{width:20,height:20,borderRadius:3,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",background:done?"var(--t1)":"transparent",border:done?"1px solid var(--t3)":run?`1px solid ${md.color}`:"1px solid var(--border2)"}}>
                   {done&&<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="var(--bg)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                  {run&&<div style={{width:8,height:8,borderRadius:"50%",background:"var(--t1)",animation:"pulse 2s infinite"}}/>}
+                  {run&&<div style={{width:8,height:8,borderRadius:"50%",background:md.color,animation:"pulse 2s infinite"}}/>}
                 </div>
                 <div style={{minWidth:0,flex:1}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <span style={{fontSize:15,fontWeight:300,color:done?"var(--t3)":"var(--t1)",textDecoration:done?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:200}}>{t.name}</span>
+                    <span style={{fontSize:9,padding:"1px 5px",borderRadius:3,background:md.bg,color:md.color}}>{md.icon}{md.name}</span>
                     {tb&&<span style={{fontSize:10,padding:"1px 5px",borderRadius:3,background:t.type==="interrupt"?"var(--amber-bg)":"var(--bg4)",color:t.type==="interrupt"?"var(--amber-t)":"var(--t3)"}}>{tb}</span>}
                   </div>
                   <div style={{fontSize:12,fontVariantNumeric:"tabular-nums",color:"var(--t2)",marginTop:2}}>
@@ -370,9 +374,9 @@ function App(){
       {view==="routines"&&<div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <span style={{fontSize:13,color:"var(--t2)"}}>ルーチン管理</span>
-          <button onClick={()=>{setRouteM("new");setRNm("");setRE("30");setRSc("s2");setRTy("daily");setRDs([])}} style={{...B}}>＋ 新規</button>
+          <button onClick={()=>{setRouteM("new");setRNm("");setRE("30");setRSc("s2");setRTy("daily");setRDs([]);setRMd("focus")}} style={{...B}}>＋ 新規</button>
         </div>
-        {routines.map(r=><div key={r.id} onClick={()=>{setRouteM(r.id);setRNm(r.name);setRE(String(r.est));setRSc(r.section);setRTy(r.recur.type);setRDs(r.recur.days||[]);setRN(r.recur.nth||1);setRW(r.recur.weekday||1)}} style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:4,padding:"14px 16px",marginBottom:4,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        {routines.map(r=><div key={r.id} onClick={()=>{setRouteM(r.id);setRNm(r.name);setRE(String(r.est));setRSc(r.section);setRTy(r.recur.type);setRDs(r.recur.days||[]);setRN(r.recur.nth||1);setRW(r.recur.weekday||1);setRMd(r.mode||"other")}} style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:4,padding:"14px 16px",marginBottom:4,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <div style={{fontSize:15,color:"var(--t1)",fontWeight:300,marginBottom:4}}>{r.icon} {r.name}</div>
             <div style={{display:"flex",gap:8,fontSize:12,color:"var(--t3)"}}>
@@ -427,6 +431,10 @@ function App(){
             <div style={{flex:1}}><div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>見積もり（分）</div><input type="number" style={I} value={addE} onChange={e=>setAddE(e.target.value)}/></div>
             <div style={{flex:1}}><div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>セクション</div><select style={Sl} value={addSc} onChange={e=>setAddSc(e.target.value)}>{sections.map(s=><option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}</select></div>
           </div>
+          <div style={{fontSize:11,color:"var(--t3)",marginBottom:6}}>モード</div>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:12}}>
+            {MODES.map(m=><button key={m.id} onClick={()=>setAddMd(m.id)} style={{background:addMd===m.id?m.bg:"transparent",border:`1px solid ${addMd===m.id?m.color+"60":"var(--border)"}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:addMd===m.id?m.color:"var(--t4)",cursor:"pointer",fontFamily:F,transition:"all .2s"}}>{m.icon} {m.name}</button>)}
+          </div>
           <div style={{display:"flex",gap:8}}><button onClick={addMan} style={{...B,flex:1,color:"var(--t1)"}}>追加</button><button onClick={()=>setAddM(false)} style={{...B,flex:1,background:"transparent"}}>キャンセル</button></div>
         </div>
       </div>}
@@ -440,6 +448,10 @@ function App(){
             <div style={{flex:1}}><div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>見積もり</div><input type="number" style={I} value={intE} onChange={e=>setIntE(e.target.value)}/></div>
             <div style={{flex:1}}><div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>セクション</div><select style={Sl} value={intSc} onChange={e=>setIntSc(e.target.value)}>{sections.map(s=><option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}</select></div>
           </div>
+          <div style={{fontSize:11,color:"var(--t3)",marginBottom:6}}>モード</div>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:12}}>
+            {MODES.map(m=><button key={m.id} onClick={()=>setIntMd(m.id)} style={{background:intMd===m.id?m.bg:"transparent",border:`1px solid ${intMd===m.id?m.color+"60":"var(--border)"}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:intMd===m.id?m.color:"var(--t4)",cursor:"pointer",fontFamily:F,transition:"all .2s"}}>{m.icon} {m.name}</button>)}
+          </div>
           <div style={{display:"flex",gap:8}}><button onClick={addInt} style={{...B,flex:1,color:"var(--amber-t)"}}>割り込み開始</button><button onClick={()=>setIntM(false)} style={{...B,flex:1,background:"transparent"}}>キャンセル</button></div>
         </div>
       </div>}
@@ -452,6 +464,10 @@ function App(){
           <div style={{display:"flex",gap:8,marginBottom:10}}>
             <div style={{flex:1}}><div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>見積もり</div><input type="number" style={I} value={rE} onChange={e=>setRE(e.target.value)}/></div>
             <div style={{flex:1}}><div style={{fontSize:11,color:"var(--t3)",marginBottom:4}}>セクション</div><select style={Sl} value={rSc} onChange={e=>setRSc(e.target.value)}>{sections.map(s=><option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}</select></div>
+          </div>
+          <div style={{fontSize:11,color:"var(--t3)",marginBottom:6}}>モード</div>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:10}}>
+            {MODES.map(m=><button key={m.id} onClick={()=>setRMd(m.id)} style={{background:rMd===m.id?m.bg:"transparent",border:`1px solid ${rMd===m.id?m.color+"60":"var(--border)"}`,borderRadius:4,padding:"6px 10px",fontSize:12,color:rMd===m.id?m.color:"var(--t4)",cursor:"pointer",fontFamily:F,transition:"all .2s"}}>{m.icon} {m.name}</button>)}
           </div>
           <div style={{fontSize:11,color:"var(--t3)",marginBottom:6}}>繰り返し</div>
           <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:10}}>
